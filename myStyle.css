@@ -1,0 +1,14 @@
+#myCanvas {
+  border: 1px solid red;
+  float: left;
+}
+#instructions {
+  float: left;
+}
+#title {
+  text-align: center;
+  font-size: 40px;
+}
+p {
+  font-size: 20px;
+}
