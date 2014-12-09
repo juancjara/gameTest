@@ -1,11 +1,14 @@
 var Square = function (data){
   data = data || {}
-  this.x = data.x || 0; 
-  this.y = data.y || 0;
-  this.w = data.w || 0;
-  this.h = data.h || 0;
   this.color = data.color || '';
   this.speed = data.speed || 0;
+}
+
+var Player = function(data) {
+  data = data || {};
+  this.x = data.x;
+  this.y = data.y;
+  this.color = 'yellow';
 }
 
 var main = function() {
@@ -15,7 +18,8 @@ var main = function() {
   var totalBlocks = 12;
   var squareSize = size / totalBlocks;
   var keys = {};
-  var speed = 50;
+  var speed = 1;
+  var matrix = [];
   var gameOnProgress = false;
   var totalEnemySquares = 30;
   var $startBtn = $('#start');
@@ -28,87 +32,88 @@ var main = function() {
     {color: 'blue', speed: 50}
   ];
 
-  var createSquare = function(data) {
-    return function(params) {
-      params.w = data.w;
-      params.h = data.h;
-      return new Square(params);
-    }
-  };
-
-  createSquare = createSquare({
-    w: squareSize,
-    h: squareSize
-  });
-
   //finish block on the bottom right corner
-  var finishSquare = createSquare({
-    x: (totalBlocks-1) * squareSize,
-    y: (totalBlocks-1) * squareSize,
+  var finishSquare = new Square({
     color: 'red'
   });
   
-  var playerSquare = createSquare({
-    x: 0,
-    y: 0,
-    color: 'yellow'
-  })
+  var player = new Player();
 
-  function collision(elem1, elem2) {
-    if ( elem1.x == elem2.x && elem1.y == elem2.y ) {
-      return true;
+  function getCoordinates(totalBlocks) {
+    return function(num) {
+      var x = parseInt(num / totalBlocks);
+      var y = num % totalBlocks;
+      return {x: x, y: y};
     }
-    return false;
   }
+  getCoordinates = getCoordinates(totalBlocks);
 
   function createEnemySquares() {
     var size = totalBlocks*totalBlocks
     var blocks = Array(size);
-    var val = 0;
+    var temp;
     var rnd1;
     var rnd2;
-    for (var i = 1; i < size -1; i++) {
-      val = 0;
-      if (i <= totalEnemySquares) {
-        val = 1;
-      }
-      blocks[i] = val;
+    var x;
+    var y;
+    var pos1;
+    var pos2;
+    matrix = [];
+
+    for (var i = 0; i < totalBlocks; i++) {
+      var arr = [];
+      for (var j = 0; j < totalBlocks; j++) {
+        arr.push(null);
+      };
+      matrix.push(arr);
+    };
+    for (var i = 1; i < totalEnemySquares; i++) {
+      pos = getCoordinates(i);
+      matrix[pos.x][pos.y] = new Square({color: 'blue'});
     };
 
     for (var i = 1; i < 400; i++) {
       rnd = Math.floor(Math.random() * (size-2)+1);
       rnd2 = Math.floor(Math.random() * (size-2)+1);
-      val = blocks[rnd];
-      blocks[rnd] = blocks[rnd2];
-      blocks[rnd2] = val;
+
+      pos1 = getCoordinates(rnd);
+      pos2 = getCoordinates(rnd2);
+
+      temp = matrix[pos1.x][pos1.y];
+      matrix[pos1.x][pos1.y] = matrix[pos2.x][pos2.y];
+      matrix[pos2.x][pos2.y] = temp;
     }
-    enemySquares = [];
-    blocks[1] = blocks[totalBlocks] = blocks[totalBlocks+1] = 1
-    for (var i = 1; i < size -1; i++) {
-      var y = parseInt(i / totalBlocks) * squareSize;
-      var x = (i % totalBlocks) * squareSize;
-      if (blocks[i]) {
-        enemySquares.push(createSquare({
-          x: x,
-          y: y,
-          color: 'blue'
-        }));
+
+    var defaultSqr = [1, totalBlocks, totalBlocks +1];
+    for (var i = 0; i < defaultSqr.length; i++) {
+      pos1 = getCoordinates(defaultSqr[i]);
+      if (!matrix[pos1.x][pos1.y]) {
+        matrix[pos1.x][pos1.y] = new Square({color: 'blue'});
       }
     };
+    
+    x = totalBlocks-1;
+    matrix[x][x] = finishSquare;
   }
 
   function drawBackground() {
     ctx.clearRect(0, 0, size, size);
-    for (var i = 0; i < enemySquares.length; i++) {
-      drawRect(enemySquares[i]);
+    
+    for (var i = 0; i < totalBlocks; i++) {
+      for (var j = 0; j < totalBlocks; j++) {
+        if (matrix[i][j]) {
+          var sqr = matrix[i][j];
+          drawSqr({
+            x: i,
+            y: j,
+            color: sqr.color
+          });
+        }
+      }
     };
-    drawRect(finishSquare);
   }
 
-  function changeDirection(obj) {
-    if (!collision(playerSquare, obj)){
-      return;
-    }
+  function changeDirection() {
     for (var i = 0; i < 6; i++) {
       var rnd = Math.floor(Math.random() * 4);
       var rnd2 = Math.floor(Math.random() * 4);
@@ -120,8 +125,8 @@ var main = function() {
 
   function movePlayer(newPos) {
     function evaluatePos(pos) {
-      var maxLimit = size - squareSize;
-      if (pos > maxLimit){
+      var maxLimit = totalBlocks - 1;
+      if (pos > maxLimit ){
         return maxLimit;
       }
       if (pos < 0) {
@@ -131,26 +136,46 @@ var main = function() {
     };
 
     drawBackground();
-    playerSquare.x += newPos.x;
-    playerSquare.y += newPos.y;
-    playerSquare.x = evaluatePos(playerSquare.x);
-    playerSquare.y = evaluatePos(playerSquare.y);
+    
+    player.x += newPos.x;
+    player.y += newPos.y;
+    player.x = evaluatePos(player.x);
+    player.y = evaluatePos(player.y);
 
-    if (collision(playerSquare, finishSquare)) {
-      gameOnProgress = false;
-      $title.text(mesages[1]);
-      return;
+    var x = player.x;
+    var y = player.y;
+    
+    if (matrix[x][y]) {
+      
+      if(matrix[x][y].color == 'red') {
+        gameOnProgress = false;
+        $title.text(mesages[1]);
+        return;
+      }
+      if (matrix[x][y]) {
+        changeDirection();
+      }
     }
-
-    for (var i = 0; i < enemySquares.length; i++) {
-      changeDirection(enemySquares[i]);
-    };
-    drawRect(playerSquare);
+    
+    drawSqr(player);
   }
+
+  function drawSqr(size) {
+    return function(obj) {
+      var sqr = {};
+      sqr.x = obj.x * size;
+      sqr.y = obj.y * size;
+      sqr.w = sqr.h = size;
+      sqr.color = obj.color;
+      drawRect(sqr);
+    }
+  }
+
+  drawSqr = drawSqr(squareSize);
 
   function drawRect(rect) {
     ctx.beginPath();
-    ctx.rect(rect.x, rect.y, rect.w, rect.h);
+    ctx.rect(rect.y, rect.x, rect.w, rect.h);
     ctx.fillStyle = rect.color;
     ctx.fill();
     ctx.closePath();
@@ -160,18 +185,18 @@ var main = function() {
     $startBtn.text('Restart');
     $title.text(mesages[0]);
     createEnemySquares();
-    speed = 50;
+    speed = 1;
     keys = {
-      37: {x: -1, y: 0},//left
-      38: {x: 0, y: -1},//up
-      39: {x: 1, y: 0},//right
-      40: {x: 0, y: 1},//down
+      37: {x: 0, y: -1},//left
+      38: {x: -1, y: 0},//up
+      39: {x: 0, y: 1},//right
+      40: {x: 1, y: 0},//down
     };
     gameOnProgress = true;
     drawBackground();
-    playerSquare.x = 0;
-    playerSquare.y = 0;
-    drawRect(playerSquare);
+    player.x = 0;
+    player.y = 0;
+    drawSqr(player);
   }
 
   window.onkeydown = function (e) {
