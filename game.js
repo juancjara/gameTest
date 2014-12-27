@@ -7,7 +7,7 @@ var Game = function(canvasId) {
     };
     this.active = false;
     this.blocksPerRow = 12;
-    this.totalSquares = 1//45;
+    this.totalSquares = 45;
     this.squareSize = this.WIDTH / this.blocksPerRow;
     var canvas = document.getElementById(canvasId);
     canvas.width = this.size.w;
