@@ -7,7 +7,8 @@ var Game = function(canvasId) {
     };
     this.active = false;
     this.blocksPerRow = 12;
-    this.totalSquares = 45;
+    this.totalSquares = 35;
+    this.jumpSquares = 5;
     this.squareSize = this.WIDTH / this.blocksPerRow;
     var canvas = document.getElementById(canvasId);
     canvas.width = this.size.w;
@@ -60,27 +61,43 @@ Game.prototype = {
       tempSquares[rnd] = tempSquares[rnd2];
       tempSquares[rnd2] = temp;
     }    
-    var defaultPos = {}, coord, sqr;
+    var defaultPos = {}, coord, sqr, type, color, turn, acum = 0;
     defaultPos[1] = false;
     defaultPos[this.blocksPerRow] = false;
     defaultPos[this.blocksPerRow+1] = false;
-    this.squares = []
+    this.squares = [];
+    var jumpSquares = []
+    turn = false;
+    var validator = parseInt(this.totalSquares / this.jumpSquares) -1;
+    validator = validator == 0 ? 1: validator;
     for (var i = 0; i < tempSquares.length; i++) {
       if (tempSquares[i]) {
         if ((i+2) in defaultPos) {
           defaultPos[i+2] = true;
         }
+        color= 'blue';
+        type = 1;
         coord = getCoordinates(i+2);
+        if (turn && jumpSquares.length < this.jumpSquares) {
+          type = 2;
+          color = 'black';
+          jumpSquares.push(acum);
+          turn = false;
+        }
+        if (acum % validator == 0) {
+          turn = true;
+        }
         sqr = new Square(this, {
           x: coord.x * this.squareSize,
           y: coord.y * this.squareSize,
-          color: 'blue',
-          type: 1
+          color: color,
+          type: type
         });
         this.squares.push(sqr);
+        acum++;
       }
     };
-
+    
     for (var k in defaultPos) {
       if (!defaultPos[k]) {
         coord = getCoordinates(k);
@@ -93,6 +110,12 @@ Game.prototype = {
         this.squares.push(sqr);
       }
     }
+    var self = this;
+    len = jumpSquares.length;
+    jumpSquares.forEach(function(item, i){
+      var pos = (i + 1) % len;
+      self.squares[item].jumpTo = self.squares[jumpSquares[pos]].position;
+    })
   },
   createEntities: function() {
     this.player = new Player(this);
@@ -116,18 +139,20 @@ Game.prototype = {
       return;
     }
     this.steps += 1;
-    var player = this.player;
-    this.squares.forEach(function(item, idx) {
+    var player = this.player, item;
+    for (var i = 0; i < this.squares.length; i++) {
+      item = this.squares[i];
       if(entitiesColliding(player, item)) {
         if (item.type == 1) {
           player.rotate();
-        } else if (item.color == 2) {
-          player.jump();
+        } else if (item.type == 2) {
+          player.jump(item.jumpTo);
         }
+        break;
       }
-    }); 
-    
-    if (entitiesColliding(player , this.endSquare)) {
+    };
+
+    if (entitiesColliding(player, this.endSquare)) {
       this.win();
     }    
     this.draw();
@@ -182,8 +207,9 @@ Player.prototype = {
   update: function() {
     
   },
-  jump: function(item) {
-    this.position = item.position;
+  jump: function(pos) {
+    this.position.x = pos.x;
+    this.position.y = pos.y;
   },
   move: function(direction) {
 
@@ -242,6 +268,7 @@ var Square = function(game, extraData) {
   this.color = extraData.color;
   this.type = extraData.type;
   this.size = {h: game.squareSize, w: game.squareSize};
+  this.jumpTo = extraData.jumpTo || null;
 }
 
 Square.prototype = {
