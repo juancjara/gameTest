@@ -48,6 +48,23 @@ var main = function() {
   }
   getCoordinates = getCoordinates(totalBlocks);
 
+  function getEnemyArray(matrix) {
+    var arr = [];
+    var totalBlocks = matrix[0].length;
+    for (var i = 0; i < totalBlocks; i++) {
+      for (var j = 0; j < totalBlocks; j++) {
+        if (matrix[i][j]) {
+          arr.push({
+            x: i,
+            y: j,
+            sqr: matrix[i][j]
+          })
+        }
+      };      
+    };    
+    return arr;
+  }
+
   function createEnemySquares() {
     var size = totalBlocks*totalBlocks
     var blocks = Array(size);
@@ -69,7 +86,9 @@ var main = function() {
     };
     for (var i = 1; i < totalEnemySquares; i++) {
       pos = getCoordinates(i);
-      matrix[pos.x][pos.y] = new Square({color: 'blue'});
+      var newsqr = new Square({color: 'blue'});
+      matrix[pos.x][pos.y] = newsqr;
+      enemySquares.push(newsqr);
     };
 
     for (var i = 1; i < 400; i++) {
@@ -88,7 +107,9 @@ var main = function() {
     for (var i = 0; i < defaultSqr.length; i++) {
       pos1 = getCoordinates(defaultSqr[i]);
       if (!matrix[pos1.x][pos1.y]) {
-        matrix[pos1.x][pos1.y] = new Square({color: 'blue'});
+        var newsqr = new Square({color: 'blue'});
+        matrix[pos1.x][pos1.y] = newsqr;
+        enemySquares.push(newsqr);
       }
     };
     
@@ -98,7 +119,16 @@ var main = function() {
 
   function drawBackground() {
     ctx.clearRect(0, 0, size, size);
-    
+    var enemies = getEnemyArray(matrix);
+    for(var i = 0; i < enemies.length; i++) {
+      var enemy = enemies[i];
+      drawSqr({
+        x: enemy.x,
+        y: enemy.y,
+        color: enemy.sqr.color
+      });
+    }
+    /*
     for (var i = 0; i < totalBlocks; i++) {
       for (var j = 0; j < totalBlocks; j++) {
         if (matrix[i][j]) {
@@ -110,7 +140,7 @@ var main = function() {
           });
         }
       }
-    };
+    };*/
   }
 
   function changeDirection() {
